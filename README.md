@@ -1,4 +1,4 @@
-# 📱 Mobile Shop System
+# 📱 Mobile Store System
 
 A full-stack web application for managing a mobile phone shop — covering stock buying, sales processing, repair/service jobs, and company settings. Built with **Next.js** (frontend) and **Node.js + Express** (backend), using **MongoDB** via **Prisma ORM**.
 
