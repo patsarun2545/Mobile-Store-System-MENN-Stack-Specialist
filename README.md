@@ -11,7 +11,7 @@ A full-stack web application for managing a mobile phone shop — covering stock
 | Frontend | Next.js 14 (App Router), TypeScript, Tailwind CSS |
 | Backend | Node.js, Express.js |
 | Database | MongoDB (via Prisma ORM) |
-| Auth | JWT (jsonwebtoken) |
+| Auth | JWT (jsonwebtoken) + js-cookie |
 | Libraries | Axios, SweetAlert2, Day.js, Recharts |
 | Deployment | Ubuntu Linux, PM2 |
 
@@ -68,7 +68,7 @@ instock  →  (added to sell list)  →  sold
 | id | ObjectId | Auto |
 | name | String | Display name |
 | username | String | Unique |
-| password | String | |
+| password | String | Plain text (no hashing) |
 | level | String | `admin` / `user` (default: `user`) |
 | status | String | `active` / `inactive` (default: `active`) |
 
@@ -85,7 +85,7 @@ instock  →  (added to sell list)  →  sold
 | customerPhone | String | |
 | customerAddress | String | |
 | remark | String | |
-| status | String | `instock` / `sold` / `delete` |
+| status | String | `instock` / `sold` / `delete` (default: `instock`) |
 
 ### Sell
 | Field | Type | Notes |
@@ -93,7 +93,7 @@ instock  →  (added to sell list)  →  sold
 | id | ObjectId | Auto |
 | productId | ObjectId | Ref → Product |
 | price | Int | Selling price |
-| status | String | `pending` / `paid` |
+| status | String | `pending` / `paid` (default: `pending`) |
 | payDate | DateTime | |
 
 ### Service
@@ -103,7 +103,7 @@ instock  →  (added to sell list)  →  sold
 | name | String | Service description |
 | price | Int | |
 | remark | String | Optional |
-| payDate | DateTime | |
+| payDate | DateTime | Auto-set on create |
 
 ### Company
 | Field | Type | Notes |
@@ -112,19 +112,21 @@ instock  →  (added to sell list)  →  sold
 | name | String | Shop name |
 | address | String | |
 | phone | String | |
-| email | String | Optional |
+| email | String | Optional (default: `""`) |
 | taxCode | String | Tax ID |
 
 ---
 
 ## 🔌 API Endpoints
 
+> **Note:** Backend runs on port `3001` (hardcoded in `server.js`). No JWT middleware on routes — token is decoded manually inside controllers that require auth.
+
 ### Auth & Users
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `POST` | `/api/user/signin` | Sign in — returns JWT |
-| `GET` | `/api/user/info` | Get current user (JWT) |
-| `PUT` | `/api/user/update` | Update own profile |
+| `GET` | `/api/user/info` | Get current user (reads JWT from Authorization header) |
+| `PUT` | `/api/user/update` | Update own profile (reads JWT from Authorization header) |
 | `GET` | `/api/user/list` | List active users |
 | `POST` | `/api/user/create` | Create user |
 | `PUT` | `/api/user/update/:id` | Update user by ID |
@@ -139,27 +141,65 @@ instock  →  (added to sell list)  →  sold
 ### Buy (Stock)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/api/buy/create` | Add stock (supports `qty` bulk insert) |
-| `GET` | `/api/buy/list` | List products (excludes deleted) |
+| `POST` | `/api/buy/create` | Add stock (supports `qty` bulk insert, max 10,000) |
+| `GET` | `/api/buy/list` | List products (excludes deleted), ordered by id desc |
 | `PUT` | `/api/buy/update/:id` | Update product |
-| `DELETE` | `/api/buy/remove/:id` | Soft-delete product (→ status: delete) |
+| `DELETE` | `/api/buy/remove/:id` | Soft-delete product (→ status: `delete`) |
 
 ### Sell
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/api/sell/create` | Add to pending sell list (lookup by serial) |
-| `GET` | `/api/sell/list` | List pending sells |
-| `DELETE` | `/api/sell/remove/:id` | Remove from pending list |
-| `GET` | `/api/sell/confirm` | Confirm all pending → paid, products → sold |
-| `GET` | `/api/sell/dashboard` | Stats: total income, total sales, total repairs |
+| `POST` | `/api/sell/create` | Add to pending sell list (lookup by serial, must be `instock`) |
+| `GET` | `/api/sell/list` | List pending sells (includes product serial + name) |
+| `DELETE` | `/api/sell/remove/:id` | Hard-delete from pending list |
+| `GET` | `/api/sell/confirm` | Confirm all pending → `paid`, products → `sold` |
+| `GET` | `/api/sell/dashboard` | Stats: totalIncome, totalSale, totalRepair |
 
 ### Service
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/api/service/create` | Log service job |
-| `GET` | `/api/service/list` | List all service jobs |
-| `PUT` | `/api/service/update/:id` | Update service job |
-| `DELETE` | `/api/service/remove/:id` | Delete service job |
+| `POST` | `/api/service/create` | Log service job (payDate auto-set) |
+| `GET` | `/api/service/list` | List all service jobs, ordered by payDate desc |
+| `PUT` | `/api/service/update/:id` | Update service job (name, price, remark only) |
+| `DELETE` | `/api/service/remove/:id` | Hard-delete service job |
+
+---
+
+## 📁 Project Structure
+
+```
+project/
+├── backend/
+│   ├── api/
+│   │   └── controllers/
+│   │       ├── CompanyController.js
+│   │       ├── ProductController.js
+│   │       ├── SellController.js
+│   │       ├── ServiceController.js
+│   │       └── UserController.js
+│   ├── prisma/
+│   │   └── schema.prisma
+│   ├── server.js
+│   └── .env
+│
+└── frontend/ (my-app)
+    └── app/
+        ├── backoffice/
+        │   ├── dashboard/page.tsx
+        │   ├── buy/page.tsx
+        │   ├── sell/page.tsx
+        │   ├── repair/page.tsx
+        │   ├── company/page.tsx
+        │   ├── user/page.tsx
+        │   ├── layout.tsx
+        │   ├── modal.tsx
+        │   └── sidebar.tsx
+        ├── signin/
+        │   └── page.tsx
+        ├── config.ts
+        ├── layout.tsx
+        └── page.tsx
+```
 
 ---
 
@@ -196,14 +236,17 @@ Create `.env` in `backend/`:
 ```env
 DATABASE_URL="mongodb+srv://<user>:<password>@cluster.mongodb.net/mobileshop"
 SECRET_KEY="your_jwt_secret"
-PORT=3001
 ```
+
+> **Note:** Port is hardcoded to `3001` in `server.js`
 
 Create `.env.local` in `frontend/`:
 
 ```env
 NEXT_PUBLIC_API_URL="http://localhost:3001/api"
 ```
+
+> **Note:** Frontend currently uses `config.ts` with hardcoded `http://localhost:3001/api`
 
 ### Database Setup
 
@@ -227,10 +270,18 @@ npm run dev
 
 ---
 
+## ⚠️ Known Limitations
+
+- **Password storage** — Passwords are stored as plain text. No bcrypt or hashing is applied.
+- **No route-level auth middleware** — JWT is decoded manually only in `/api/user/info` and `/api/user/update`. All other routes are unprotected.
+- **Dashboard chart** — Monthly income bar chart currently uses random data. Real monthly data from API is not yet implemented.
+- **Port not configurable** — Backend port is hardcoded to `3001` in `server.js` and does not read from `.env`.
+- **API URL hardcoded** — Frontend `config.ts` uses `http://localhost:3001/api` directly instead of reading from `NEXT_PUBLIC_API_URL`.
+
+---
+
 ## 👨‍💻 Author
 
 **Patsarun Kathinthong**
 - Email: patsarun2545@gmail.com
 - GitHub: [github.com/patsarun2545](https://github.com/patsarun2545)
-
----
