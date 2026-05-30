@@ -1,6 +1,7 @@
 # 📱 Mobile Store Web
 
-![Live Demo](https://img.shields.io/badge/demo-live-green)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-000?style=flat-square&logo=vercel&logoColor=white)](https://mobile-store-web-jet.vercel.app/)
+
 
 A full-stack web application for managing a mobile phone shop with stock buying, sales processing, repair/service jobs, and company settings. Built with **Next.js 16** (App Router) and **Node.js + Express** backend, using **MongoDB** via **Prisma ORM**.
 
